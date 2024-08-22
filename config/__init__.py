@@ -1,7 +1,7 @@
 MITSUBA_PATH = './dependencies/mitsuba3/build/python'
 DRJIT_LIBLLVM_PATH = '/usr/lib/llvm-14/lib/libLLVM.so'
-VARIANT = 'llvm_ad_rgb'
-# VARIANT = 'cuda_ad_rgb'
+# VARIANT = 'llvm_ad_rgb'
+VARIANT = 'cuda_ad_rgb'
 DEVICE = 'cuda' if VARIANT == 'cuda_ad_rgb' else 'cpu'
 
 # Aliases
