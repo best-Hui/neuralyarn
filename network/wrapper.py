@@ -6,8 +6,15 @@ mi.set_variant(variant)
 
 import torch
 import torch.nn as nn
-    
-# Adapted from https://github.com/mitsuba-renderer/mitsuba3/discussions/579#discussioncomment-5652452
+
+
+
+# 这段代码定义了一个将 PyTorch 模型 转换为 Mitsuba （基于 drjit）兼容格式的类，
+# 并且对不同类型的网络层进行适配，使其能够在 drjit 中执行。这是为了将 PyTorch 中训练好的模型转换为一个可以在 Mitsuba 渲染器中执行的模型。
+
+
+# 用于矩阵乘法的实现（类似于 torch.matmul），但使用 drjit 实现，适用于 GPU 加速。
+# 它采用了 dr.gather 和 dr.scatter_reduce 等 drjit 操作来进行矩阵的逐元素相乘和加法操作
 def matmul(a: mi.TensorXf, b: mi.TensorXf) -> mi.TensorXf:
     # Check conditions
     assert len(a.shape) == 2
@@ -34,6 +41,8 @@ def matmul(a: mi.TensorXf, b: mi.TensorXf) -> mi.TensorXf:
     dr.scatter_reduce(dr.ReduceOp.Add, c.array, tmp, dr.repeat(dr.arange(mi.UInt, N * M), K))
     return c
 
+
+# 模拟了一个全连接层（线性层），该类包含了权重和偏置的属性，并且实现了 forward 方法来执行矩阵乘法和加法操作
 class Linear:
     def __init__(self, weight, bias):
         self.weight = weight
@@ -43,6 +52,8 @@ class Linear:
         y = matmul(self.weight, x) + self.bias
         return y
 
+
+# 模拟了 PReLU（Parametric ReLU）激活函数，其中包含一个可训练的参数 weight，并实现了 forward 方法来计算激活值
 class PReLU:
     def __init__(self, weight):
         self.weight = weight
@@ -50,7 +61,14 @@ class PReLU:
     def forward(self, x):
         y = dr.maximum(0.0, x) + self.weight * dr.minimum(0.0, x)
         return y
-    
+
+
+# 这是主要的包装类，它将一个训练好的 PyTorch 模型转换为 drjit 兼容的模型。
+# 它首先遍历 PyTorch 模型的各个层，检查每一层的类型，然后根据类型进行相应的转换：
+# 对于线性层（torch.nn.Linear），提取权重和偏置，并将其转换为 mi.TensorXf 格式，以便在 Mitsuba 渲染中使用。
+# 对于 PReLU 激活层（torch.nn.PReLU），提取激活权重并转换为 mi.TensorXf。
+# 其他层类型会抛出 NotImplementedError。
+# test 方法用来验证转换后的 drjit 模型输出与 PyTorch 模型输出是否一致
 class MiModelWrapper():
     def __init__(self, torch_model, activation):
         self.torch_model = torch_model
@@ -75,6 +93,8 @@ class MiModelWrapper():
             
         self.test()
 
+    # 实现了将输入数据通过模型的各层进行前向传播。
+    # 在 MiModelWrapper 中，数据通过 Linear 层和 PReLU 层依次传递，最后通过指定的激活函数（通常是 ReLU 或类似的函数）进行处理
     def forward(self, x):
         for layer in self.layers:
             x = layer.forward(x)

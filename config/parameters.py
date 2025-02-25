@@ -1,6 +1,8 @@
 import pandas as pd
 from io import StringIO
 
+# 读取一个包含布料纤维参数的数据，并根据用户提供的名称（name）返回相应的纤维参数
+# 整个论文中使用的光纤参数。阴影参数基于[ksz*15]的匹配纤维，并以临时性设置几何参数
 def get_fiber_parameters(name=None):
 
     text = \
@@ -14,8 +16,10 @@ polyester,  200,    0.400,  0.200,  0.700,  0.700,  0.700,  0.600,  0.000,  0.80
 """
 
     file = StringIO(text)
+    # read_csv是panda库中的一个函数，用于从CSV（逗号分隔值）格式的文件或字符串中读取数据，并将其转换成一个pandasDataFrame
     parameters = pd.read_csv(file, index_col=0, header=0, skipinitialspace=True)
 
+    # 检查用户是否提供了name参数（即你要查询的布料名称）
     if name is not None:
         parameters = parameters.loc[name]
 
